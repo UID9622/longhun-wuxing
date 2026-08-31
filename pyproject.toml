@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "longhun-wuxing"
+version = "0.1.0"
+description = "🐉 龍魂·五行计算器 v4.0 · 四柱干支→五行强度→链路分析→补益建议→对冲指数→翻译第五维"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MulanPSL-2.0" }
+authors = [
+  { name = "诸葛鑫（UID9622）· 龍芯北辰", email = "346045695@qq.com" },
+]
+keywords = ["longhun", "wuxing", "五行", "四柱", "bazi", "cnsh", "chinese-culture"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = []
+
+[project.scripts]
+lh-wuxing = "longhun_wuxing.lh_wuxing:main"
+
+[tool.setuptools]
+packages = ["longhun_wuxing"]
+
+# DNA: #龍芯⚡️2026-09-01-LONGHUN-WUXING-V0.1.0-UID9622
+# 创建者: 诸葛鑫（UID9622）
+# 归属名: 诸葛鑫 | UID9622 · 龍芯北辰
+# License: MulanPSL v2 (https://license.coscl.org.cn/MulanPSL2)
+# 确认码: #CONFIRM🌌9622-ONLY-ONCE🧬LK9X-772Z
