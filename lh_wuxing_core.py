@@ -511,8 +511,39 @@ def 龍魂五行计算器(年天干: str, 年地支: str, 月天干: str, 月地
 生成节点 = 生成流场节点
 
 
-# ---------- 命令行入口 ----------
-if __name__ == "__main__":
+# ---------- 命令行入口（v4.0 最小闭环 CLI · 协议§十对接表） ----------
+
+def _解析四柱(文本: str) -> Optional[List[str]]:
+    """解析8字四柱：接受'甲子丙午庚申壬戌'或'甲 子 丙 午 庚 申 壬 戌'"""
+    字 = [c for c in 文本 if c.strip()]
+    return 字 if len(字) == 8 else None
+
+
+def _扁平节点(结果: Dict) -> Dict:
+    """机器可读扁平输出（协议§十·对接表字段名）"""
+    节点 = 结果["流场节点"]
+    return {
+        "version": 结果["版本"],
+        "node_id": 节点["node_id"],
+        "digital_root": 节点["数字根"],
+        "element": 节点["五行"],
+        "relation": 节点["关系"],
+        "audit": 节点["审计"],
+        "dna": 节点["DNA"],
+        "action": 节点["动作"],
+        "对冲指数H": 结果["对冲指数"]["对冲指数H"],
+        "三色": 结果["对冲指数"]["三色"],
+        "最强": 结果["五行强度"]["最强"],
+        "最弱": 结果["五行强度"]["最弱"],
+        "均衡指数": 结果["五行强度"]["均衡指数"],
+        "链路健康度": 结果["链路分析"]["链路健康度"],
+        "追溯DNA": 结果["DNA追溯"],
+        "备注": 节点["备注"],
+    }
+
+
+def _自检打印() -> int:
+    """原硬编码自检（无参数时保持 v4.0 原行为）"""
     结果 = 龍魂五行计算器("甲", "子", "丙", "午", "庚", "申", "壬", "戌")
 
     print("=" * 60)
@@ -533,3 +564,76 @@ if __name__ == "__main__":
     print(f"DNA: {结果['DNA追溯']}")
     print(f"确认码: {结果['确认码']}")
     print("=" * 60)
+    return 0
+
+
+def _主命令行(argv: List[str]) -> int:
+    """最小闭环 CLI：
+    python3 lh_wuxing_core.py <8字四柱> [--json] [--out 路径]   # 四柱分析
+    python3 lh_wuxing_core.py --selftest                        # 校验+金标准断言
+    """
+    输出文件 = None
+    clean: List[str] = []
+    i = 0
+    while i < len(argv):  # 先抽取 --out 的值，避免被当位置参数
+        a = argv[i]
+        if a == "--out" and i + 1 < len(argv):
+            输出文件 = argv[i + 1]
+            i += 2
+            continue
+        clean.append(a)
+        i += 1
+    位置参数 = [a for a in clean if not a.startswith("--")]
+    flags = {a for a in clean if a.startswith("--")}
+
+    if "--selftest" in flags:
+        校验结果 = 校验()
+        金标准 = 龍魂五行计算器("甲", "子", "丙", "午", "庚", "申", "壬", "戌")
+        H = 金标准["对冲指数"]["对冲指数H"]
+        ok = 校验结果["校验通过"] and H == 0.927 and 金标准["对冲指数"]["三色"].startswith("🟢")
+        报告 = {
+            "selftest": "PASS" if ok else "FAIL",
+            "校验项": len(校验结果["通过"]),
+            "金标准H": H,
+            "三色": 金标准["对冲指数"]["三色"],
+        }
+        print(json.dumps(报告, ensure_ascii=False, indent=2))
+        return 0 if ok else 1
+
+    if not 位置参数:
+        return _自检打印()
+
+    四柱字 = _解析四柱("".join(位置参数))
+    if not 四柱字:
+        print("❌ 四柱须为8个字，如: 甲子丙午庚申壬戌", file=sys.stderr)
+        return 1
+
+    结果 = 龍魂五行计算器(*四柱字)
+
+    if "--json" in flags:
+        print(json.dumps(_扁平节点(结果), ensure_ascii=False, indent=2))
+    else:
+        print("=" * 60)
+        print("🐉 龍魂五行计算器 v4.0 · 四柱分析")
+        print("=" * 60)
+        print(f"四柱: {结果['四柱']}")
+        print(f"五行得分: {结果['五行强度']['五行得分']}")
+        print(f"最强: {结果['五行强度']['最强']} · 最弱: {结果['五行强度']['最弱']}")
+        print(f"均衡指数: {结果['五行强度']['均衡指数']}")
+        print(f"链路: {结果['链路分析']['状态']} (健康度{结果['链路分析']['链路健康度']})")
+        print(f"对冲指数H: {结果['对冲指数']['对冲指数H']} · {结果['对冲指数']['三色']}")
+        print(f"翻译第五维: {结果['翻译引擎第五维']['状态']} → {结果['翻译引擎第五维']['五行定位']}")
+        print(f"DNA: {结果['DNA追溯']}")
+        print("=" * 60)
+
+    if 输出文件:
+        os.makedirs(os.path.dirname(输出文件) or ".", exist_ok=True)
+        with open(输出文件, "w", encoding="utf-8") as f:
+            json.dump(_扁平节点(结果), f, ensure_ascii=False, indent=2)
+        print(f"📄 回执已写入: {输出文件}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(_主命令行(sys.argv[1:]))
